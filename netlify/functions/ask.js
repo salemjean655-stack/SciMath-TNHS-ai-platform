@@ -19,19 +19,21 @@ exports.handler = async function (event, context) {
     const data = await res.json();
 
     if (!res.ok) {
-      // 🔴 Show OpenAI’s error JSON in browser
       return {
         statusCode: res.status,
         body: JSON.stringify({ error: data }),
       };
     }
 
+    const answer = data.choices?.[0]?.message?.content;
+
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        answer:
-          data.choices?.[0]?.message?.content || "⚠️ Empty response from AI",
-      }),
+      body: JSON.stringify(
+        answer
+          ? { answer }
+          : { warning: "No answer received", fullResponse: data }
+      ),
     };
   } catch (err) {
     return {
@@ -40,4 +42,3 @@ exports.handler = async function (event, context) {
     };
   }
 };
-
