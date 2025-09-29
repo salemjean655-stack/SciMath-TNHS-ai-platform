@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Web-Based Learning Platform (AI Powered)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f7fa; }
+    header { background: #1e88e5; color: white; text-align: center; padding: 20px; }
+    nav { display: flex; justify-content: center; background: #1565c0; flex-wrap: wrap; }
+    nav button { flex: 1; padding: 15px; border: none; background: #1565c0; color: white; font-size: 14px; cursor: pointer; }
+    nav button:hover, nav button.active { background: #0d47a1; }
+    .container { padding: 20px; max-width: 900px; margin: auto; }
+    .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    textarea, input { width: 100%; padding: 10px; font-size: 16px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    button.action { background: #ff9800; color: white; padding: 10px 15px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    button.action:hover { background: #e68900; }
+    .output { margin-top: 15px; background: #f0f0f0; padding: 15px; border-radius: 6px; min-height: 50px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Interactive Web-Based Learning Platform</h1>
+  <p>Now powered by AI 🎉</p>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('qna')">🤖 AI Q&A</button>
+  <button onclick="showTab('calc')">🧮 Calculator</button>
+  <button onclick="showTab('poly')">📊 Polynomial Solver</button>
+</nav>
+
+<div class="container">
+  <!-- AI Q&A Tab -->
+  <div id="qna" class="card">
+    <h2>AI-Powered Math & Science Q&A</h2>
+    <input id="userInput" type="text" placeholder="Ask me any math or science question...">
+    <button class="action" onclick="answerQuestion()">Ask</button>
+    <div id="response" class="output"></div>
+  </div>
+
+  <!-- Calculator Tab -->
+  <div id="calc" class="card hidden">
+    <h2>Calculator</h2>
+    <input id="calcInput" type="text" placeholder="Enter expression e.g. 5 + 3 * 2">
+    <button class="action" onclick="calculateExpression()">Calculate</button>
+    <div id="calcResult" class="output"></div>
+  </div>
+
+  <!-- Polynomial Solver Tab -->
+  <div id="poly" class="card hidden">
+    <h2>Polynomial Solver (up to quadratic)</h2>
+    <p>Enter a quadratic equation in the form ax^2+bx+c=0 (e.g., 2x^2-4x+3=0):</p>
+    <input id="polyInput" type="text" placeholder="Enter polynomial equation">
+    <button class="action" onclick="solvePolynomial()">Solve</button>
+    <div id="polyResult" class="output"></div>
+  </div>
+</div>
+
+<script>
+// Tab navigation
+function showTab(tabId) {
+  document.querySelectorAll('.card').forEach(card => card.classList.add('hidden'));
+  document.getElementById(tabId).classList.remove('hidden');
+  document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// AI Q&A Function (FIXED: added headers for JSON)
+async function answerQuestion() {
+  const input = document.getElementById('userInput').value.trim();
+  const responseBox = document.getElementById('response');
+
+  if (!input) {
+    responseBox.textContent = "Please type a question.";
+    return;
+  }
+
+  responseBox.textContent = "🤔 Thinking...";
+
+  try {
+    const res = await fetch("/.netlify/functions/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // ✅ FIXED
+      body: JSON.stringify({ question: input })
+    });
+
+    const data = await res.json();
+    responseBox.textContent = data.answer || "⚠️ No answer received.";
+  } catch (err) {
+    responseBox.textContent = "❌ Error: " + err.message;
+  }
+}
+
+// Calculator
+function factorial(n) {
+  if (n < 0) return NaN;
+  let f = 1;
+  for (let i = 2; i <= n; i++) f *= i;
+  return f;
+}
+
+function calculateExpression() {
+  const input = document.getElementById('calcInput').value.trim();
+  const resultBox = document.getElementById('calcResult');
+  try {
+    if (input.endsWith('!')) {
+      let n = parseInt(input.slice(0, -1));
+      resultBox.textContent = `${n}! = ${factorial(n)}`;
+    } else {
+      let safeExpr = input.replace(/\^/g, '**');
+      const result = Function('"use strict";return (' + safeExpr + ')')();
+      resultBox.textContent = `Result: ${result}`;
+    }
+  } catch {
+    resultBox.textContent = "Could not evaluate expression.";
+  }
+}
+
+// Polynomial Solver (quadratic only)
+function solvePolynomial() {
+  const input = document.getElementById('polyInput').value.replace(/\s+/g, '');
+  const resultBox = document.getElementById('polyResult');
+  const match = input.match(/([+-]?\d*)x\^2([+-]?\d*)x([+-]?\d+)=0/);
+  if (match) {
+    const a = parseFloat(match[1] || 1);
+    const b = parseFloat(match[2] || 0);
+    const c = parseFloat(match[3] || 0);
+    const disc = b*b - 4*a*c;
+    if (disc < 0) { resultBox.textContent = "No real roots."; return; }
+    const root1 = (-b + Math.sqrt(disc)) / (2*a);
+    const root2 = (-b - Math.sqrt(disc)) / (2*a);
+    resultBox.textContent = `Roots: ${root1}, ${root2}`;
+  } else {
+    resultBox.textContent = "Please enter a quadratic like ax^2+bx+c=0";
+  }
+}
+</script>
+
+</body>
+</html>
