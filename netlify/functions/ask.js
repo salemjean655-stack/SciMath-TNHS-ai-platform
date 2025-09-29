@@ -1,44 +1,33 @@
-// netlify/functions/ask.js
-exports.handler = async function (event, context) {
+import OpenAI from "openai";
+
+export async function handler(event, context) {
   try {
-    const body = event.body ? JSON.parse(event.body) : {};
-    const question = body.question || "Hello";
+    // Parse the request body
+    const { question } = JSON.parse(event.body);
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: question }],
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
+    if (!question) {
       return {
-        statusCode: res.status,
-        body: JSON.stringify({ error: data }),
+        statusCode: 400,
+        body: JSON.stringify({ error: "No question provided." }),
       };
     }
 
-    const answer = data.choices?.[0]?.message?.content;
+    // Initialize OpenAI client with your API key from environment variables
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 
+    // Call OpenAI API (you can adjust model and prompt)
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: question }],
+    });
+
+    // Return the AI answer
     return {
       statusCode: 200,
-      body: JSON.stringify(
-        answer
-          ? { answer }
-          : { warning: "No answer received", fullResponse: data }
-      ),
+      body: JSON.stringify({ answer: response.choices[0].message.content }),
     };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
+  } catch (error) {
+    console.error("AI Error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
-};
+}
